@@ -41,7 +41,7 @@ class ExamplePlugin(Plugin):
     def __init__(self, parent=None, table=None):
         """Customise this and/or doFrame for your widgets"""
 
-        if parent==None:
+        if parent is None:
             return
         self.parent = parent
         self.table = table
@@ -107,7 +107,7 @@ class ExamplePlugin(Plugin):
             QtCore.QCoreApplication.processEvents()
             time.sleep(0.3)
         opts.updateWidgets({'groupby':'label'})
-        for kind in ['bar','line','area','histogram','heatmap']:
+        for _ in ['bar','line','area','histogram','heatmap']:
             #opts.updateWidgets({'kind':kind})
             self.tablewidget.plot()
             QtCore.QCoreApplication.processEvents()

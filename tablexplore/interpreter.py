@@ -61,9 +61,8 @@ class Interpreter(code.InteractiveConsole):
         Init an interpreter, get globals and locals from current context.
         Define classic python prompt style.
         """
-        context = globals().copy()
-        context.update(locals().copy())
-        context.update(extra_context.copy())
+        context = globals() | locals()
+        context |= extra_context.copy()
         #
         super(Interpreter, self).__init__(context)
         self.inter_name = self.__class__.__name__
@@ -87,9 +86,9 @@ class Interpreter(code.InteractiveConsole):
         #reference to table
         self.table = table
         self.app = app
-        context.update({'df':table.model.df})
+        context['df'] = table.model.df
         import pandas as pd
-        context.update({'pd':pd})
+        context['pd'] = pd
         return
 
     def write(self, data):
@@ -124,8 +123,8 @@ class Interpreter(code.InteractiveConsole):
         :param exitmsg: no used
         :return:
         """
-        cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
         if banner is None:
+            cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
             self.write("Python %s on %s\n%s\n(%s)\n" % (sys.version, sys.platform, cprt, self.inter_name))
         elif banner:
             self.write("%s\n" % str(banner))
@@ -139,10 +138,7 @@ class Interpreter(code.InteractiveConsole):
         :return:
         """
         self.more = self.push(code)
-        if self.more:
-            self.prompt = sys.ps2
-        else:
-            self.prompt = sys.ps1
+        self.prompt = sys.ps2 if self.more else sys.ps1
         self.raw_input(self.prompt)
 
     def runcode(self, code):

@@ -103,13 +103,12 @@ class ItemEditorFactory(QItemEditorFactory):
         super().__init__()
 
     def createEditor(self, userType, parent):
-        if userType == QtCore.QVariant.Double:
-            doubleSpinBox = QDoubleSpinBox(parent)
-            doubleSpinBox.setDecimals(3)
-            #doubleSpinBox.setMaximum(1000)
-            return doubleSpinBox
-        else:
+        if userType != QtCore.QVariant.Double:
             return super().createEditor(userType, parent)
+        doubleSpinBox = QDoubleSpinBox(parent)
+        doubleSpinBox.setDecimals(3)
+        #doubleSpinBox.setMaximum(1000)
+        return doubleSpinBox
 
 class DataFrameWidget(QWidget):
     """Widget containing a tableview and toolbars"""
@@ -229,7 +228,7 @@ class DataFrameWidget(QWidget):
     def importFile(self, filename=None, dialog=True, **kwargs):
         """Import csv file"""
 
-        if dialog is True and filename == None:
+        if dialog is True and filename is None:
             options = QFileDialog.Options()
             filename, _ = QFileDialog.getOpenFileName(self,"Import File",
                                  "","CSV files (*.csv);;Text Files (*.txt);;All Files (*)",
@@ -357,7 +356,7 @@ class DataFrameWidget(QWidget):
     def plot(self):
         """Plot from selection"""
 
-        if self.pf == None:
+        if self.pf is None:
             self.createPlotViewer()
         self.pf.setVisible(True)
         df = self.getSelectedDataFrame()
@@ -367,9 +366,9 @@ class DataFrameWidget(QWidget):
     def createPlotViewer(self, parent=None):
         """Create a plot widget attached to this table"""
 
-        if self.pf == None:
+        if self.pf is None:
             self.pf = plotting.PlotViewer(table=self.table, parent=parent)
-        if parent == None:
+        if parent is None:
             self.pf.show()
         return self.pf
 
@@ -417,7 +416,6 @@ class DataFrameWidget(QWidget):
         kwds = dlg.values
         keep = kwds['keep']
         remove = kwds['remove']
-        inplace = kwds['inplace']
         if kwds['useselected'] == 1:
             idx = self.table.getSelectedColumns()
             cols = df.columns[idx]
@@ -427,6 +425,7 @@ class DataFrameWidget(QWidget):
         new = df[df.duplicated(subset=cols,keep=keep)]
         if remove == True:
             new = df.drop_duplicates(subset=cols,keep=keep)
+            inplace = kwds['inplace']
             if inplace == True:
                 self.table.model.df = new
                 self.refresh()
@@ -547,10 +546,7 @@ class DataFrameWidget(QWidget):
         useselected = kwds['selected columns only']
         fillempty = kwds['fillempty']
 
-        if useselected == 1 and len(idx)>0:
-            colnames = df.columns[idx]
-        else:
-            colnames = df.columns
+        colnames = df.columns[idx] if useselected == 1 and len(idx)>0 else df.columns
         print (idx,colnames)
         self.table.storeCurrent()
         for c in colnames:
@@ -572,8 +568,6 @@ class DataFrameWidget(QWidget):
 
         dlg = dialogs.ConvertTypesDialog(self, self.table.model.df)
         dlg.exec_()
-        if not dlg.accepted:
-            return
         return
 
     def convertColumnNames(self):
@@ -636,10 +630,7 @@ class DataFrameWidget(QWidget):
                         'sin','cos','tan','degrees','radians']
         multifuncs = ['mean','std','max','min','sum']
 
-        if len(cols)>1:
-            funcs = multifuncs+singlefuncs
-        else:
-            funcs = singlefuncs
+        funcs = multifuncs+singlefuncs if len(cols)>1 else singlefuncs
         types = ['float','int']
         opts = {'funcname':  {'type':'combobox','default':'int','items':funcs,'label':'Function'},
                 'scalar': {'type':'entry','default':1,'label':'Argument'},
@@ -660,18 +651,11 @@ class DataFrameWidget(QWidget):
         suffix = kwds['suffix']
         group = kwds['group']
 
-        if funcname == 'diff':
-            func = funcname
-        else:
-            func = getattr(np, funcname)
-
+        func = funcname if funcname == 'diff' else getattr(np, funcname)
         self.table.storeCurrent()
 
         if newcol == '':
-            if len(cols)>3:
-                s = ' %s cols' %len(cols)
-            else:
-                s =  '(%s)' %(','.join(cols))[:20]
+            s = f' {len(cols)} cols' if len(cols)>3 else f"({','.join(cols)[:20]})"
             newcol = funcname + s
 
         if funcname == 'divide':
@@ -706,8 +690,7 @@ class DataFrameWidget(QWidget):
         """Get a function as attribute of a class by name"""
 
         if obj != None:
-            func = getattr(obj, funcname)
-            return func
+            return getattr(obj, funcname)
         if hasattr(pd, funcname):
             func = getattr(pd, funcname)
         elif hasattr(np, funcname):

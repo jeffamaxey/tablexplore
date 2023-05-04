@@ -29,11 +29,10 @@ import pandas as pd
 
 def getEmptyData(rows=10,columns=4):
     colnames = list(string.ascii_lowercase[:columns])
-    df = pd.DataFrame(index=range(rows),columns=colnames)
-    return df
+    return pd.DataFrame(index=range(rows),columns=colnames)
 
 def genstr(n=2):
-    return ''.join(random.choice(string.ascii_lowercase) for i in range(n))
+    return ''.join(random.choice(string.ascii_lowercase) for _ in range(n))
 
 def getSampleData(rows=400, cols=5, namelen=2):
     """Generate sample data"""
@@ -41,7 +40,7 @@ def getSampleData(rows=400, cols=5, namelen=2):
     if namelen == 1:
         colnames = list(string.ascii_lowercase[:cols])
     else:
-        colnames = [genstr(namelen) for i in range(cols)]
+        colnames = [genstr(namelen) for _ in range(cols)]
     if namelen==1 and cols>26:
         cols=26
     coldata = [np.random.normal(x,1,rows) for x in np.random.normal(5,3,cols)]
@@ -60,5 +59,4 @@ def getPresetData(name):
     """Get iris dataset"""
 
     path = os.path.dirname(__file__)
-    df = pd.read_csv(os.path.join(path,'datasets','%s.csv' %name),index_col=0)
-    return df
+    return pd.read_csv(os.path.join(path, 'datasets', f'{name}.csv'), index_col=0)

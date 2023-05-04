@@ -89,7 +89,7 @@ class Terminal(QPlainTextEdit):
 
         self.prompt = None
         self.cursor_line = None
-        if hist_file == None:
+        if hist_file is None:
             self.hist_file = os.path.join(os.path.expanduser("~"), ".pyTermHist")
         else:
             self.hist_file = hist_file
@@ -218,8 +218,7 @@ class Terminal(QPlainTextEdit):
         :return: str last line
         """
         doc = self.document()
-        last_line = doc.lineCount()
-        return last_line
+        return doc.lineCount()
 
     def get_cursor_position(self):
         """
@@ -265,8 +264,7 @@ class Terminal(QPlainTextEdit):
         Get next history in the readline GNU history file.
         :return: str history
         """
-        if self.history_index <= 1:
-            self.history_index = 1
+        self.history_index = max(self.history_index, 1)
         hist = readline.get_history_item(self.history_index)
         self.history_index -= 1
         return hist
@@ -280,8 +278,7 @@ class Terminal(QPlainTextEdit):
         propositions = []
         completer = self.completer
         for i in range(AUTOCOMPLETE_LIMIT):
-            ret = completer.complete(command, i)
-            if ret:
+            if ret := completer.complete(command, i):
                 propositions.append(ret)
             else:
                 break

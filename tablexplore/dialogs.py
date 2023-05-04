@@ -65,7 +65,7 @@ def dialogFromOptions(parent, opts, sections=None,
     sizepolicy.setHorizontalStretch(0)
     sizepolicy.setVerticalStretch(0)
 
-    if style == None:
+    if style is None:
         style = '''
         QLabel {
             font-size: 14px;
@@ -75,7 +75,7 @@ def dialogFromOptions(parent, opts, sections=None,
         }
         '''
 
-    if sections == None:
+    if sections is None:
         sections = {'options': opts.keys()}
 
     widgets = {}
@@ -109,7 +109,10 @@ def dialogFromOptions(parent, opts, sections=None,
             lbl.setMinimumWidth(150)
             gl.addWidget(lbl,row,col)
             lbl.setStyleSheet(style)
-            if t == 'combobox':
+            if t == 'checkbox':
+                w = QCheckBox()
+                w.setChecked(val)
+            elif t == 'combobox':
                 w = QComboBox()
                 w.addItems(opt['items'])
                 index = w.findText(val)
@@ -120,21 +123,21 @@ def dialogFromOptions(parent, opts, sections=None,
                 if 'width' in opt:
                     w.setMinimumWidth(opt['width'])
                     w.resize(opt['width'], 20)
-            elif t == 'list':
-                w = QListWidget()
-                w.setSelectionMode(QAbstractItemView.MultiSelection)
-                w.addItems(opt['items'])
             elif t == 'entry':
                 w = QLineEdit()
                 w.setText(str(val))
                 if 'width' in opt:
                     w.setMaximumWidth(opt['width'])
                     w.resize(opt['width'], 20)
-            elif t == 'textarea':
-                w = QPlainTextEdit()
-                #w.setSizePolicy(sizepolicy)
-                w.insertPlainText(str(val))
-                w.setMaximumHeight(100)
+            elif t == 'font':
+                w = QFontComboBox()
+                index = w.findText(val)
+                #w.resize(w.sizeHint())
+                w.setCurrentIndex(index)
+            elif t == 'list':
+                w = QListWidget()
+                w.setSelectionMode(QAbstractItemView.MultiSelection)
+                w.addItems(opt['items'])
             elif t == 'slider':
                 w = QSlider(QtCore.Qt.Horizontal)
                 s,e = opt['range']
@@ -145,10 +148,7 @@ def dialogFromOptions(parent, opts, sections=None,
                 w.setTickPosition(QSlider.TicksBelow)
                 w.setValue(val)
             elif t == 'spinbox':
-                if type(val) is float:
-                    w = QDoubleSpinBox()
-                else:
-                    w = QSpinBox()
+                w = QDoubleSpinBox() if type(val) is float else QSpinBox()
                 w.setValue(val)
                 if 'range' in opt:
                     min,max=opt['range']
@@ -156,14 +156,11 @@ def dialogFromOptions(parent, opts, sections=None,
                     w.setMinimum(min)
                 if 'interval' in opt:
                     w.setSingleStep(opt['interval'])
-            elif t == 'checkbox':
-                w = QCheckBox()
-                w.setChecked(val)
-            elif t == 'font':
-                w = QFontComboBox()
-                index = w.findText(val)
-                #w.resize(w.sizeHint())
-                w.setCurrentIndex(index)
+            elif t == 'textarea':
+                w = QPlainTextEdit()
+                #w.setSizePolicy(sizepolicy)
+                w.insertPlainText(str(val))
+                w.setMaximumHeight(100)
             col+=1
             gl.addWidget(w,row,col)
             w.setStyleSheet(style)
@@ -505,9 +502,9 @@ class ImportDialog(QDialog):
 
         self.textarea.clear()
         file = open(self.filename, 'r')
-        for i in range(100):
-             line = file.readline()
-             self.textarea.insertPlainText(line)
+        for _ in range(100):
+            line = file.readline()
+            self.textarea.insertPlainText(line)
         self.textarea.verticalScrollBar().setValue(1)
         return
 
@@ -622,10 +619,7 @@ class BasicDialog(QDialog):
         super(BasicDialog, self).__init__(parent)
         self.parent = parent
         self.df = df
-        if app != None:
-            self.app = app
-        else:
-            self.app = self.parent.app
+        self.app = app if app != None else self.parent.app
         self.setWindowTitle(title)
         self.createWidgets()
         self.setGeometry(QtCore.QRect(400, 300, 1000, 600))
@@ -677,7 +671,7 @@ class BasicDialog(QDialog):
     def copy_to_sheet(self):
         """Copy result to new sheet in app, if available"""
 
-        if self.app == None:
+        if self.app is None:
             return
         name, ok = QInputDialog().getText(self, "Enter Sheet Name",
                                              "Name:", QLineEdit.Normal)
@@ -702,7 +696,7 @@ class BasicDialog(QDialog):
                              options=options)
         if not filename:
             return
-        if not os.path.splitext(filename)[1] == '.csv':
+        if os.path.splitext(filename)[1] != '.csv':
             filename += '.csv'
         df.to_csv(filename)
         return
@@ -762,12 +756,8 @@ class AggregateDialog(BasicDialog):
         grpcols = [i.text() for i in self.groupbyw.selectedItems()]
         aggcols =[i.text() for i in self.aggw.selectedItems()]
         funcs = [i.text() for i in self.funcw.selectedItems()]
-        aggdict = {}
-
         if len(funcs)==1: funcs=funcs[0]
-        for a in aggcols:
-            aggdict[a] = funcs
-
+        aggdict = {a: funcs for a in aggcols}
         res = self.df.groupby(grpcols).agg(aggdict).reset_index()
         self.table.model.df = res
         self.table.refresh()
@@ -896,9 +886,12 @@ class MergeDialog(BasicDialog):
     def createWidgets(self):
         """Create widgets"""
 
-        if self.df2 is None:
-            if hasattr(self.parent, 'subtable') and self.parent.subtable != None:
-                self.df2 = self.parent.subtable.table.model.df
+        if (
+            self.df2 is None
+            and hasattr(self.parent, 'subtable')
+            and self.parent.subtable != None
+        ):
+            self.df2 = self.parent.subtable.table.model.df
         try:
             cols2 = self.df2.columns
         except:
@@ -1029,9 +1022,7 @@ class ConvertTypesDialog(BasicDialog):
         main.setMaximumWidth(300)
         vbox.addWidget(main)
 
-        res = []
-        for col in self.df.columns:
-            res.append([col,str(self.df[col].dtype),''])
+        res = [[col,str(self.df[col].dtype),''] for col in self.df.columns]
         cols = ['name','type','convert']
         info = pd.DataFrame(res, columns=cols)
 
@@ -1162,10 +1153,7 @@ class PreferencesDialog(QDialog):
 
         import pylab as plt
         import platform
-        if 'Windows' in platform.platform():
-            defaultfont = 'Arial'
-        else:
-            defaultfont = 'FreeSans'
+        defaultfont = 'Arial' if 'Windows' in platform.platform() else 'FreeSans'
         colormaps = sorted(m for m in plt.cm.datad if not m.endswith("_r"))
         timeformats = ['%m/%d/%Y','%d/%m/%Y','%d/%m/%y',
                 '%Y/%m/%d','%y/%m/%d','%Y/%d/%m',
@@ -1332,16 +1320,13 @@ class FindReplaceDialog(QWidget):
             found[col] = df[col].str.contains(s, na=False, case=self.case)
         #set the masked dataframe so that highlighted cells are shown on redraw
         table.model.highlighted = found
-        i=0
         self.coords = []
-        for r,row in found.iterrows():
-            j=0
-            for col,val in row.iteritems():
-                if val is True:
-                    #print (r,col,val, i, j)
-                    self.coords.append((i,j))
-                j+=1
-            i+=1
+        for i, (r, row) in enumerate(found.iterrows()):
+            self.coords.extend(
+                (i, j)
+                for j, (col, val) in enumerate(row.iteritems())
+                if val is True
+            )
         self.current = 0
         #print (self.coords)
         return
@@ -1477,8 +1462,7 @@ class FilterDialog(QWidget):
         mask = None
 
         s = self.query_w.text()
-        cols = [i.text() for i in self.column_w.selectedItems()]
-        if len(cols)>0:
+        if cols := [i.text() for i in self.column_w.selectedItems()]:
             df = df[cols]
         if s!='':
             try:
@@ -1514,11 +1498,7 @@ class FilterDialog(QWidget):
                 pass
             #print (col, val, op, b)
             print (self.ignorecase)
-            if self.ignorecase == True:
-                strval = "(?i)"+str(val).lower()
-            else:
-                strval = str(val)
-
+            strval = f"(?i){str(val).lower()}" if self.ignorecase == True else str(val)
             if op == 'contains':
                 m = df[col].astype(str).str.contains(strval)
             elif op == 'equals':

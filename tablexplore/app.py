@@ -157,11 +157,10 @@ class Application(QMainWindow):
         """Change interface style."""
 
         if style == 'default':
-            	self.setStyleSheet("")
+            self.setStyleSheet("")
         else:
-            f = open(os.path.join(stylepath,'%s.qss' %style), 'r')
-            self.style_data = f.read()
-            f.close()
+            with open(os.path.join(stylepath, f'{style}.qss'), 'r') as f:
+                self.style_data = f.read()
             self.setStyleSheet(self.style_data)
         self.style = style
         return
@@ -361,7 +360,7 @@ class Application(QMainWindow):
         """Populate recent files menu"""
 
         from functools import partial
-        if self.recent_files == None:
+        if self.recent_files is None:
             return
         for fname in self.recent_files:
             self.recent_files_menu.addAction(fname, partial(self.openProject, fname))
@@ -390,7 +389,7 @@ class Application(QMainWindow):
                 self.saveProject()
             elif reply == QMessageBox.Cancel:
                 return
-        if not type(data) is dict:
+        if type(data) is not dict:
             data = None
         #clear tabs
         self.main.clear()
@@ -404,10 +403,7 @@ class Application(QMainWindow):
                 if s in ['meta','scratch_items']:
                     continue
                 df = data[s]['table']
-                if 'meta' in data[s]:
-                    meta = data[s]['meta']
-                else:
-                    meta=None
+                meta = data[s]['meta'] if 'meta' in data[s] else None
                 self.addSheet(s, df, meta)
             if 'scratch_items' in data:
                 self.scratch_items = data['scratch_items']
@@ -421,13 +417,11 @@ class Application(QMainWindow):
     def openProject(self, filename=None, asksave=False):
         """Open project file"""
 
-        w=True
-        if asksave == True:
-            w = self.closeProject()
-        if w == None:
+        w = self.closeProject() if asksave == True else True
+        if w is None:
             return
 
-        if filename == None:
+        if filename is None:
             options = QFileDialog.Options()
             filename, _ = QFileDialog.getOpenFileName(self,"Open Project",
                                   homepath,"tablexplore Files (*.txpl);;All files (*.*)",
@@ -468,7 +462,7 @@ class Application(QMainWindow):
         if not filename:
             return
 
-        if not os.path.splitext(filename)[1] == '.txpl':
+        if os.path.splitext(filename)[1] != '.txpl':
             filename += '.txpl'
         self.filename = filename
         self.do_saveProject(filename)
@@ -488,7 +482,7 @@ class Application(QMainWindow):
         if not filename:
             return
         self.running = True
-        if not os.path.splitext(filename)[1] == '.txpl':
+        if os.path.splitext(filename)[1] != '.txpl':
             filename += '.txpl'
         self.filename = filename
         self.defaultsavedir = os.path.dirname(os.path.abspath(filename))
@@ -498,10 +492,11 @@ class Application(QMainWindow):
     def saveWithProgress(self, filename):
         """Save with progress bar"""
 
-        self.savedlg = dlg = dialogs.ProgressWidget(label='Saving to %s' %filename)
+        self.savedlg = dlg = dialogs.ProgressWidget(label=f'Saving to {filename}')
         dlg.show()
         def func(progress_callback):
             self.do_saveProject(self.filename)
+
         self.run_threaded_process(func, self.processing_completed)
         return
 
@@ -560,18 +555,15 @@ class Application(QMainWindow):
         """Save meta data such as current plot options and certain table attributes.
          These are re-loaded when the sheet is opened."""
 
-        meta = {}
         pf = tablewidget.pf
         pf.applyPlotoptions()
         table = tablewidget.table
-        #save plot options
-        meta['generalopts'] = pf.generalopts.kwds
-        #meta['mplopts3d'] = pf.mplopts3d.kwds
-        meta['labelopts'] = pf.labelopts.kwds
-        meta['axesopts'] = pf.axesopts.kwds
-
-        #save table selections
-        meta['table'] = util.getAttributes(table)
+        meta = {
+            'generalopts': pf.generalopts.kwds,
+            'labelopts': pf.labelopts.kwds,
+            'axesopts': pf.axesopts.kwds,
+            'table': util.getAttributes(table),
+        }
         meta['table']['filtered'] = False
         meta['table']['column_widths'] = table.getColumnWidths()
         meta['plotviewer'] = util.getAttributes(pf)
@@ -587,11 +579,7 @@ class Application(QMainWindow):
         table selections"""
 
         tablesettings = meta['table']
-        if 'subtable' in meta:
-            subtable = meta['subtable']
-            #childsettings = meta['childselected']
-        else:
-            subtable = None
+        subtable = meta['subtable'] if 'subtable' in meta else None
         #load plot options
         opts = {'generalopts': table.pf.generalopts,
                 #'mplopts3d': table.pf.mplopts3d,
@@ -709,11 +697,11 @@ class Application(QMainWindow):
 
         names = list(self.sheets.keys())
         i=len(self.sheets)+1
-        if name == None or name in names:
-            name = 'dataset'+str(i)
+        if name is None or name in names:
+            name = f'dataset{str(i)}'
         if name in names:
             import random
-            name = 'dataset'+str(random.randint(i,100))
+            name = f'dataset{random.randint(i, 100)}'
 
         sheet = QSplitter(self.main)
         sheet.setStyleSheet(splittercss)
@@ -828,8 +816,6 @@ class Application(QMainWindow):
         table2 = self.sheets[kwds['sheet2']].table
         dlg = dialogs.MergeDialog(self, df=table1.model.df, df2=table2.model.df, app=self)
         dlg.exec_()
-        if not dlg.accepted:
-            return
         return
 
     def showPlotFrame(self):
@@ -895,7 +881,6 @@ class Application(QMainWindow):
     def getSampleData(self, name, rows=None):
         """Sample table"""
 
-        ok = True
         sheetname = name
         if name in self.sheets:
             i = len(self.sheets)
@@ -914,6 +899,7 @@ class Application(QMainWindow):
                 rows = kwds['rows']
                 cols = kwds['cols']
                 n = kwds['n']
+            ok = True
             if ok:
                 df = data.getSampleData(rows,cols,n)
             else:
@@ -928,8 +914,7 @@ class Application(QMainWindow):
 
         idx = self.main.currentIndex()
         name = self.main.tabText(idx)
-        table = self.sheets[name]
-        return table
+        return self.sheets[name]
 
     def copy(self):
         w = self.getCurrentTable()
@@ -1143,15 +1128,19 @@ class Application(QMainWindow):
             import PyQt5
             qtver = 'PyQt5='+ PyQt5.QtCore.QT_VERSION_STR
 
-        text='Tablexplore Application\n'\
-                +'Version '+__version__+'\n'\
-                +'Copyright (C) Damien Farrell 2018-\n'\
-                +'This program is free software; you can redistribute it and/or\n'\
-                +'modify it under the terms of the GNU General Public License '\
-                +'as published by the Free Software Foundation; either version 3 '\
-                +'of the License, or (at your option) any later version.\n'\
-                +'Using Python v%s, %s\n' %(pythonver, qtver)\
-                +'pandas v%s, matplotlib v%s' %(pandasver,mplver)
+        text = (
+            'Tablexplore Application\n'
+            + 'Version '
+            + __version__
+            + '\n'
+            + 'Copyright (C) Damien Farrell 2018-\n'
+            + 'This program is free software; you can redistribute it and/or\n'
+            + 'modify it under the terms of the GNU General Public License '
+            + 'as published by the Free Software Foundation; either version 3 '
+            + 'of the License, or (at your option) any later version.\n'
+            + 'Using Python v%s, %s\n' % (pythonver, qtver)
+            + f'pandas v{pandasver}, matplotlib v{mplver}'
+        )
 
         msg = QMessageBox.about(self, "About", text)
         return

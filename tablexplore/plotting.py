@@ -101,7 +101,7 @@ style = '''
 class PlotWidget(FigureCanvas):
     def __init__(self, parent=None, figure=None, dpi=100, hold=False):
 
-        if figure == None:
+        if figure is None:
             figure = Figure()
         super(PlotWidget, self).__init__(figure)
         self.setParent(parent)
@@ -314,11 +314,7 @@ class PlotViewer(QWidget):
     def zoom(self, zoomin=True):
         """Zoom in/out to plot by changing size of elements"""
 
-        if zoomin == False:
-            val=-1.0
-        else:
-            val=1.0
-
+        val = -1.0 if zoomin == False else 1.0
         if len(self.generalopts.kwds) == 0:
             return
 
@@ -341,11 +337,7 @@ class PlotViewer(QWidget):
         """Replot with given dataframe"""
 
         self.clear()
-        if data is None:
-            self.data = self.table.getSelectedDataFrame()
-        else:
-            self.data = data
-
+        self.data = self.table.getSelectedDataFrame() if data is None else data
         self.applyPlotoptions()
         self.setStyle()
         self.plotCurrent()
@@ -403,7 +395,7 @@ class PlotViewer(QWidget):
 
         ftypes = [('png','*.png'),('jpg','*.jpg'),('tif','*.tif'),('pdf','*.pdf'),
                     ('eps','*.eps'),('svg','*.svg')]
-        if filename == None:
+        if filename is None:
             filename, _ = QFileDialog.getSaveFileName(self,"Save Project",
                                               "","png files (*.png);;jpg files (*.jpg)")
         if filename:
@@ -415,7 +407,7 @@ class PlotViewer(QWidget):
     def showWarning(self, text='plot error', ax=None):
         """Show warning message in the plot window"""
 
-        if ax==None:
+        if ax is None:
             ax = self.fig.add_subplot(111)
         ax.clear()
         ax.text(.5, .5, text, transform=self.ax.transAxes,

@@ -40,7 +40,7 @@ class ExamplePlugin(Plugin):
     def __init__(self, parent=None, table=None):
         """Customise this and/or doFrame for your widgets"""
 
-        if parent==None:
+        if parent is None:
             return
         self.parent = parent
         self.table = table
@@ -56,10 +56,7 @@ class ExamplePlugin(Plugin):
     def createWidgets(self):
         """Create widgets if GUI plugin"""
 
-        if 'docked' in self.capabilities:
-            self.main = QDockWidget()
-        else:
-            self.main = QWidget()
+        self.main = QDockWidget() if 'docked' in self.capabilities else QWidget()
         self.frame = QWidget(self.main)
         self.main.setWidget(self.frame)
         layout = self.layout = QHBoxLayout()
@@ -68,8 +65,8 @@ class ExamplePlugin(Plugin):
         tb.resize(300,300)
         layout.addWidget(tb)
         text = 'This is a sample plugin.\n'\
-        'see https://github.com/dmnfarrell/tablexplore/tree/master/plugins '\
-        'for code examples.'
+            'see https://github.com/dmnfarrell/tablexplore/tree/master/plugins '\
+            'for code examples.'
         tb.insertPlainText(text)
         #add a table widget
         t = self.tablewidget = core.DataFrameWidget(self.frame, font=core.FONT,
@@ -104,6 +101,4 @@ class ExamplePlugin(Plugin):
     def about(self):
         """About this plugin"""
 
-        txt = "This plugin implements ...\n"+\
-               "version: %s" %self.version
-        return txt
+        return "This plugin implements ...\n" + f"version: {self.version}"

@@ -33,16 +33,12 @@ def valueToBool(value):
 def getEmptyData(rows=10,columns=4):
 
     colnames = list(string.ascii_lowercase[:columns])
-    df = pd.DataFrame(index=range(rows),columns=colnames)
-    return df
+    return pd.DataFrame(index=range(rows),columns=colnames)
 
 def check_multiindex(index):
     """Check if index is a multiindex"""
 
-    if isinstance(index, pd.MultiIndex):
-        return 1
-    else:
-        return 0
+    return 1 if isinstance(index, pd.MultiIndex) else 0
 
 def getAttributes(obj):
     """Get non hidden and built-in type object attributes that can be persisted"""
@@ -53,11 +49,13 @@ def getAttributes(obj):
         if key.startswith('_'):
             continue
         item = obj.__dict__[key]
-        if type(item) in allowed:
+        if (
+            type(item) not in allowed
+            and type(item) is dict
+            and checkDict(item) == 1
+            or type(item) in allowed
+        ):
             d[key] = item
-        elif type(item) is dict:
-            if checkDict(item) == 1:
-                d[key] = item
     return d
 
 def setAttributes(obj, data):
@@ -77,35 +75,30 @@ def checkDict(d):
     for k, v in d.items():
         if isinstance(v, dict):
             checkDict(v)
-        else:
-            if type(v) not in allowed:
-                return 0
+        elif type(v) not in allowed:
+            return 0
     return 1
 
 def getFonts():
-     """Get the current list of system fonts"""
+    """Get the current list of system fonts"""
 
-     import matplotlib.font_manager
-     #l = matplotlib.font_manager.get_fontconfig_fonts()
-     l = matplotlib.font_manager.findSystemFonts()
-     fonts = []
-     for fname in l:
-        try: fonts.append(matplotlib.font_manager.FontProperties(fname=fname).get_name())
-        except RuntimeError: pass
-     fonts = list(set(fonts))
-     fonts.sort()
-     #f = matplotlib.font_manager.FontProperties(family='monospace')
-     #print (matplotlib.font_manager.findfont(f))
-     return fonts
+    import matplotlib.font_manager
+    #l = matplotlib.font_manager.get_fontconfig_fonts()
+    l = matplotlib.font_manager.findSystemFonts()
+    fonts = []
+    for fname in l:
+       try: fonts.append(matplotlib.font_manager.FontProperties(fname=fname).get_name())
+       except RuntimeError: pass
+    return sorted(set(fonts))
 
 def adjustColorMap(cmap, minval=0.0, maxval=1.0, n=100):
     """Adjust colormap to avoid using white in plots"""
 
     from matplotlib import colors
-    new_cmap = colors.LinearSegmentedColormap.from_list(
+    return colors.LinearSegmentedColormap.from_list(
         'trunc({n},{a:.2f},{b:.2f})'.format(n=cmap.name, a=minval, b=maxval),
-        cmap(np.linspace(minval, maxval, n)))
-    return new_cmap
+        cmap(np.linspace(minval, maxval, n)),
+    )
 
 def colorScale(hex_color, brightness_offset=1):
     """Takes a hex color and produces a lighter or darker variant.
@@ -117,7 +110,9 @@ def colorScale(hex_color, brightness_offset=1):
         #import matplotlib
         #hex_color = matplotlib.colors.cnames[hex_color].lower()
     if len(hex_color) != 7:
-        raise Exception("Passed %s into color_variant(), needs to be in #87c95f format." % hex_color)
+        raise Exception(
+            f"Passed {hex_color} into color_variant(), needs to be in #87c95f format."
+        )
     rgb_hex = [hex_color[x:x+2] for x in [1, 3, 5]]
     new_rgb_int = [max(0, int(hex_value, 16) + brightness_offset) for hex_value in rgb_hex]
     r,g,b = [min([255, max([1, i])]) for i in new_rgb_int]
@@ -128,7 +123,7 @@ def checkOS():
     """Check the OS we are in"""
 
     from sys import platform as _platform
-    if _platform == "linux" or _platform == "linux2":
+    if _platform in ["linux", "linux2"]:
         return 'linux'
     elif _platform == "darwin":
         return 'darwin'

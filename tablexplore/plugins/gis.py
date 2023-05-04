@@ -81,7 +81,7 @@ class GISPlugin(Plugin):
     def __init__(self, parent=None, table=None):
         """Customise this and/or doFrame for your widgets"""
 
-        if parent==None:
+        if parent is None:
             return
         self.parent = parent
         self.tablewidget = table
@@ -143,10 +143,7 @@ class GISPlugin(Plugin):
     def createWidgets(self):
         """Create widgets"""
 
-        if 'docked' in self.capabilities:
-            self.main = QDockWidget()
-        else:
-            self.main = QWidget()
+        self.main = QDockWidget() if 'docked' in self.capabilities else QWidget()
         self.frame = QWidget(self.main)
         self.main.setWidget(self.frame)
         layout = self.layout = QHBoxLayout()
@@ -317,7 +314,7 @@ class GISPlugin(Plugin):
         column = None
         i=1
         pf.fig.clear()
-        if ax == None:
+        if ax is None:
             if subplots == 1:
                 size = len(order)
                 nrows = int(round(np.sqrt(size),0))
@@ -365,10 +362,7 @@ class GISPlugin(Plugin):
 
         pf = self.tablewidget.pf
         axes = pf.fig.axes
-        limits = {}
-        for ax in axes:
-            limits[ax.id] = (ax.get_xlim(),ax.get_ylim())
-        return limits
+        return {ax.id: (ax.get_xlim(),ax.get_ylim()) for ax in axes}
 
     def replot(self):
         """Plot after edits to layers"""
@@ -529,7 +523,7 @@ class GISPlugin(Plugin):
         else:
             new = getattr(layer.gdf.geometry, func)
         new = gpd.GeoDataFrame(geometry=new)
-        self.addEntry(name+'_%s' %func, new)
+        self.addEntry(name + f'_{func}', new)
         self.replot()
         return
 
@@ -602,15 +596,15 @@ class GISPlugin(Plugin):
         size = dlg.values['size']
         bounds = [int(i)for i in bounds]
 
-        if kind == 'polygons':
+        if kind == 'points':
+            points = make_points(n, bounds=bounds)
+            gdf = gpd.GeoDataFrame(geometry= gpd.GeoSeries(points))
+
+        elif kind == 'polygons':
             polygons = make_polygons(n, pts=sides, bounds=bounds, size=size)
             gdf = gpd.GeoDataFrame(geometry= gpd.GeoSeries(polygons))
             gdf = merge_overlap(gdf)
             gdf['area'] = gdf.geometry.area
-        elif kind == 'points':
-            points = make_points(n, bounds=bounds)
-            gdf = gpd.GeoDataFrame(geometry= gpd.GeoSeries(points))
-
         gdf['label'] = random_labels(len(gdf))
         self.addEntry(name, gdf)
         self.plot()
@@ -625,9 +619,11 @@ class GISPlugin(Plugin):
     def about(self):
         """About this plugin"""
 
-        text = "This plugin implements a simple GIS "+\
-                "plugin with the ability to load and plot shapefiles. "+\
-                "Version: %s" %version
+        text = (
+            "This plugin implements a simple GIS "
+            + "plugin with the ability to load and plot shapefiles. "
+            + f"Version: {version}"
+        )
 
         #icon = QIcon(os.path.join(core.pluginiconpath,self.iconfile))
         msg = QMessageBox.about(self.main, "About", text)
@@ -640,9 +636,8 @@ def merge_overlap(gdf):
 
     intersection= gpd.overlay(gdf, gdf, how='intersection')
     union = intersection.unary_union
-    shapes = gpd.GeoSeries([polygon for polygon in union])
-    new = gpd.GeoDataFrame(geometry=shapes)
-    return new
+    shapes = gpd.GeoSeries(list(union))
+    return gpd.GeoDataFrame(geometry=shapes)
 
 def nearest(point, gdf):
     gdf['dist'] = gdf.apply(lambda row:  point.distance(row.geometry),axis=1)
@@ -659,10 +654,7 @@ def distance_matrix(gdf, index=None):
         point = r.geometry
         x = gdf.geometry.apply(lambda x: round(distance(x,point),3))
         X.append(x)
-    if index == None:
-        index = gdf.index
-    else:
-        index = list(gdf[index])
+    index = gdf.index if index is None else list(gdf[index])
     X = pd.DataFrame(X,index=index)#,columns=index)
     return X
 
@@ -702,8 +694,7 @@ def make_polygon(x=1,y=1,pts=10,r=5):
         d = r/2
         x1,y1 = point_pos(x,y,d,i)
         coords.append((x1,y1))
-    poly = Polygon(coords)
-    return poly
+    return Polygon(coords)
 
 def make_multipolygons(n=1):
 
@@ -713,8 +704,8 @@ def make_multipolygons(n=1):
     return mpoly
 
 def random_labels(n):
-    return [random_string(5) for i in range(n)]
+    return [random_string(5) for _ in range(n)]
 
 def random_string(length):
     pool = string.ascii_letters + string.digits
-    return ''.join(random.choice(pool) for i in range(length))
+    return ''.join(random.choice(pool) for _ in range(length))
